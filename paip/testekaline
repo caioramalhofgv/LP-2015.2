@@ -1,9 +1,14 @@
-Testes que passaram
+Testes que passaram:
 
 (equal (simp '(2 + 2)) 4)
+(equal (simp '( x ^ cos pi)) '(1 / x))
 
-Testes que nao passaram
+Testes que não passaram:
 
 (equal (simp '( d ( x + x ) / d x )) 2)
 (equal (simp '(d (a * x ^ 2 + b * x + c) / d x)) 2)
 (equal (simp '( d ( ( a * x ^ 2 + b * x + c) / x) / d x)) '( ( ( ( A * (X 2 ) ) + ( ( B * X I + C)) - (X * ( ( 2 * (A * XI) + B ) ) )))))
+(equal (simp '( l o g ( ( d ( x + x ) / d x ) / 2 ) )) 0)
+(equal (simp '(d (3 * x + (cos x) / x) / d x)) '((((cos x) - (x * (- (sin x))) / (x ^ 2)) + 3)))
+(equal (simp '(d (3 * x ^ 2 + 2 * x + 1) / d x)) '((6 * x) + 2))
+(equal (simp '(sin (x + x) ^ 2 + cos(d x ^ 2 / d x) ^ 2)) 1)
