@@ -1,5 +1,6 @@
+;;; Part 1/2: ref. pattern matcher
+
 (defun starts-with (list x)
-  "Is this a list whose first element is x?"
   (and (consp list) (eql (first list) x)))
 
 (defconstant fail nil "Indicates pat-match failure")
@@ -8,44 +9,36 @@
              "Indicates pat-match success, with no variables.")
 
 (defun variable-p (x)
-  "Is x a variable (a symbol beginnng with '?')?"
   (and (symbolp x)
        (equal (char (symbol-name x) 0) #\?)))
 
 (defun simple-equal (x y)
-  "Are x and y equal ? (Don't check inside strings.)"
   (if (or (atom x) (atom y))
     (eql x y)
     (and (simple-equal (first x) (first y))
          (simple-equal (rest x) (rest y)))))
 
 (defun get-binding (var bindings)
-  "Find a (variable . value) pair in a binding list."
   (assoc var bindings))
 
 (defun binding-val (binding)
-  "Get the value part of a single binding."
   (cdr binding))
 
 (defun binding-var (binding)
-  "Get the var part of a single binding."
   (car binding))
 
 (defun make-binding (var val) (cons var val))
 
 (defun lookup (var bindings)
-  "Get the value part (for var) from a binding list."
   (binding-val (get-binding var bindings)))
 
 (defun extend-bindings (var val bindings)
-  "Add a (var . value) pair to a binding list."
   (cons (cons var val)
         (if (eq bindings no-bindings)
-          nil
-          bindings)))
+        nil
+        bindings)))
 
 (defun match-variable (var input bindings)
-  "Does VAR match input? Uses (or updates) and returns bindings."
   (let ((binding (get-binding var bindings)))
     (cond ((not binding) (extend-bindings var input bindings))
           ((simple-equal input (binding-val binding)) bindings)
@@ -62,48 +55,37 @@
 (setf (get '?if 'segment-match) 'match-if)
 
 (defun segment-pattern-p (pattern)
-  "Is this a segment-matching pattern like ((?* var) . pat)?"
   (and (consp pattern) (consp (first pattern))
        (symbolp (first (first pattern)))
        (segment-match-fn (first (first pattern)))))
 
 (defun single-pattern-p (pattern)
-  "Is this a single matching pattern?
-  E.g. (?is x predicate) (?and . patterns) (?or . patterns)."
   (and (consp pattern)
        (single-match-fn (first pattern))))
 
 (defun segment-matcher (pattern input bindings)
-  "Call the right function for this kind of segment pattern."
   (let ((fun (segment-match-fn (first (first pattern)))))
     (funcall fun
-             pattern input bindings)))
+        pattern input bindings)))
 
 (defun segment-match-fn (x)
-  "Get the segment match function for x,
-  if it is a symbol that has one."
   (when (symbolp x)
     (get x 'segment-match)))
 
 (defun single-match-fn (x)
-  "Get the single-match function for x,
-  if it is a symbol that has one."
   (when (symbolp x)
     (get x 'single-match)))
 
 (defun match-is (var-and-pred input bindings)
-  "Succeed and bind var if the input satisfies pred,
-  where var-and-pred is the list (var pred)."
   (let* ((var (first var-and-pred))
-         (pred (second var-and-pred))
-         (new-bindings (pat-match var input bindings)))
+        (pred (second var-and-pred))
+        (new-bindings (pat-match var input bindings)))
     (if (or (eq new-bindings fail)
-            (not (funcall pred input)))
+        (not (funcall pred input)))
       fail
       new-bindings)))
 
 (defun match-and (patterns input bindings)
-  "Succeed if all the patterns match the input."
   (cond ((eq bindings fail) fail)
         ((null patterns) bindings)
         (t (match-and (rest patterns) input
@@ -111,8 +93,7 @@
                                  bindings)))))
 
 (defun match-or (patterns input bindings)
-  "Succeed if any one of the patterns match the input."
-  (if (null patterns)
+    (if (null patterns)
     fail
     (let ((new-bindings (pat-match (first patterns)
                                    input bindings)))
@@ -121,19 +102,15 @@
         new-bindings))))
 
 (defun match-not (patterns input bindings)
-  "Succeed if none of the patterns match the input.
-   This will never bind any variables."
-   (if (match-or patterns input bindings)
+  (if (match-or patterns input bindings)
      fail
      bindings))
 
 (defun single-matcher (pattern input bindings)
-  "Call the right function for this kind of single pattern."
   (funcall (single-match-fn (first pattern))
            (rest pattern) input bindings))
 
 (defun segment-match (pattern input bindings &optional (start 0))
-  "Match the segment pattern ((?* var) . pat) against input."
   (let ((var (second (first pattern)))
         (pat (rest pattern)))
     (if (null pat)
@@ -151,28 +128,21 @@
               b2)))))))
 
 (defun first-match-pos (pat1 input start)
-  "Find the first position that pat1 could possibly match input,
-  starting at position start. If pat1 is non-constant, then just
-  return start."
   (cond ((and (atom pat1) (not (variable-p pat1)))
          (position pat1 input :start start :test #'equal))
         ((< start (length input)) start)
         (t nil)))
 
 (defun segment-match+ (pattern input bindings)
-  "Match one or more elements of input."
   (segment-match pattern input bindings 1))
 
 (defun segment-match? (pattern input bindings)
-  "Match zero or one element of input."
   (let ((var (second (first pattern)))
         (pat (rest pattern)))
     (or (pat-match (cons var pat) input bindings) ; with
         (pat-match pat input bindings)))) ; without
 
 (defun match-if (pattern input bindings)
-    "Test an arbitrary expression involving variables.
-    The pattern looks like ((?if code) . rest)."
     ;; *** fix, rjf 10/1/92 (used to eval binding values)
     (and (progv (mapcar #'car bindings)
            (mapcar #'(lambda (bid)
@@ -186,19 +156,16 @@
          (pat-match (rest pattern) input bindings)))
 
 (defun pat-match-abbrev (symbol expansion)
-  "Define symbol as a macro standing for a pat-match pattern."
   (setf (get symbol 'expand-pat-match-abbrev)
         (expand-pat-match-abbrev expansion)))
 
 (defun expand-pat-match-abbrev (pat)
-  "Expand out all pattern matching abbreviations in pat."
   (cond ((and (symbolp pat) (get pat 'expand-pat-match-abbrev)))
         ((atom pat) pat)
         (t (cons (expand-pat-match-abbrev (first pat))
                  (expand-pat-match-abbrev (rest pat))))))
 
 (defun pat-match (pattern input &optional (bindings no-bindings))
-  "Match pattern against input in the context of the bindings"
   (cond ((eq bindings fail) fail)
         ((and (equal pattern '??) ;; escaped ?
               (equal input '?))
@@ -216,11 +183,8 @@
                                bindings)))
         (t fail)))
 
-
 (defun rule-based-translator
             (input rules &key (matcher #'pat-match) (rule-if #'first) (rule-then #'rest) (action #'sublis))
-  "Find the first rule in rules that match the input,
-  and apply the action to that rule."
   (some
     #'(lambda (rule)
         (let ((result (funcall matcher (funcall rule-if rule) input)))
@@ -229,16 +193,15 @@
     rules))
 
 
+;;; Part 2/2: ref. symbolic-math
+
 (defun variable-p (exp)
-  "Variables are the symbols M through Z."
-  ;; put x,y,z first to find them a little faster
   (member exp '((x y z m n o p q r s t u v w))))
 
 (defun binary-expr-p (x)
     (and (expr-p x) (= (length (expr-args x)) 2)))
 
 (defun prefix->infix (exp)
-  "Translate prefix to infix expressions."
   (if (atom exp) exp
     (mapcar #'prefix->infix
             (if (binary-expr-p exp)
@@ -257,7 +220,6 @@
 (pat-match-abbrev 's '(?is s not-numberp))
 
 (defun simp-rule (rule)
-  "Transform a rule into proper format."
   (let ((expr (infix->prefix rule)))
     (mkexp (expand-pat-match-abbrev (expr-lhs expr))
            (expr-op expr) (expr-rhs expr))))
@@ -279,7 +241,6 @@
             ((x+ ^ y+) (^ x y)))))
 
 (defun infix->prefix (exp)
-  "Translate an infix expression into prefix notation."
   ;; Note we cannot do implicit multiplication in this system
   (cond ((atom exp) exp)
         ((= (length exp) 1) (infix->prefix (first exp)))
@@ -298,7 +259,6 @@
         (t (error "Illegal exp"))))
 
 (defun expr-variable-p (expr)
-  "Variables are the symbols M through Z."
   ;; put x,y,z first to find them a little faster
   (member expr '(x y z m n o p q r s t u v w)))
 
@@ -400,7 +360,6 @@
                                                            ((sin x) ^ 2 + (cos x) ^ 2 = 1)
                                                            ))))
 
-
 (setf *simplification-rules* 
       (append *simplification-rules* (mapcar #'simp-rule '(
                                                            (d x / d x       = 1)
@@ -420,8 +379,6 @@
                                                            (d u / d x       = 0)))))
 
 (defun factorize (exp)
-  "Return a list of the factors of exp^n,
-  where each factor is of the form (^ y n)."
   (let ((factors nil)
         (constant 1))
     (labels
@@ -452,13 +409,10 @@
         (1 factors)
         (t `((^ ,constant 1) .,factors))))))
 
-
 (defun simp-fn (op) (get op 'simp-fn))
 (defun set-simp-fn (op fn) (setf (get op 'simp-fn) fn))
 
 (defun simplify-expr (expr)
-  "Simplify using a rule, or by doing arithmetic,
-  or by using the simp function supplied for this operator."
   (cond ((simplify-by-fn expr))
         ((rule-based-translator expr *simplification-rules*
                                 :rule-if #'expr-lhs :rule-then #'expr-rhs
@@ -468,24 +422,18 @@
         (t expr)))
 
 (defun simplify-by-fn (expr)
-  "If there is a simplification fn for this expr,
-  and if applying it gives a non-null result,
-  then simplify the result and return that."
   (let* ((fn (simp-fn (expr-op expr)))
          (result (if fn (funcall fn expr))))
     (if (null result)
       nil
       (simplify result))))
 
-
 (defun unfactorize (factors)
-  "Convert a list of factors back into prefix form."
   (cond ((null factors) 1)
         ((length=1 factors) (first factors))
         (t `(* ,(first factors) ,(unfactorize (rest factors))))))
 
 (defun divide-factors (numer denom)
-  "Divide a list of factors by another, producing a third."
   (let ((result (mapcar #'copy-list numer)))
     (dolist (d denom)
       (let ((factor (find (expr-lhs d) result :key #'expr-lhs
@@ -500,11 +448,9 @@
        (null (rest ls))))
 
 (defun free-of (expr var)
-  "True if expression has no occurrence of var."
   (not (find-anywhere var expr)))
 
 (defun find-anywhere (item tree)
-  "Does item occur anywhere in tree? If so, return it."
   (cond ((eql item tree) tree)
         ((atom tree) nil)
         ((find-anywhere item (first tree)))
@@ -537,8 +483,6 @@
                     (t `(int? ,(unfactorize x-factors) ,x)))))))))
 
 (defun partition-if (pred list)
-  "Return 2 values: elements of list that satisfy pred,
-  and elements that don't."
   (let ((yes-list nil)
         (no-list nil))
     (dolist (item list)
