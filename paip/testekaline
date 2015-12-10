@@ -1,0 +1,9 @@
+Testes que passaram
+
+(equal (simp '(2 + 2)) 4)
+
+Testes que nao passaram
+
+(equal (simp '( d ( x + x ) / d x )) 2)
+(equal (simp '(d (a * x ^ 2 + b * x + c) / d x)) 2)
+(equal (simp '( d ( ( a * x ^ 2 + b * x + c) / x) / d x)) '( ( ( ( A * (X 2 ) ) + ( ( B * X I + C)) - (X * ( ( 2 * (A * XI) + B ) ) )))))
